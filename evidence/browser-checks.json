@@ -1,0 +1,50 @@
+[
+  {
+    "case": "AAA",
+    "result": "PASS",
+    "errors": []
+  },
+  {
+    "case": "BAA",
+    "result": "PASS",
+    "errors": []
+  },
+  {
+    "case": "ABA",
+    "result": "PASS",
+    "errors": []
+  },
+  {
+    "case": "BBA",
+    "result": "PASS",
+    "errors": []
+  },
+  {
+    "case": "AAB",
+    "result": "PASS",
+    "errors": []
+  },
+  {
+    "case": "BAB",
+    "result": "PASS",
+    "errors": []
+  },
+  {
+    "case": "ABB",
+    "result": "PASS",
+    "errors": []
+  },
+  {
+    "case": "BBB",
+    "result": "PASS",
+    "errors": []
+  },
+  {
+    "case": "personalization+student tutor input",
+    "result": "PASS"
+  },
+  {
+    "case": "expert 60 second countdown begins",
+    "result": "PASS"
+  }
+]
