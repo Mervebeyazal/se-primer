@@ -1,0 +1,34 @@
+name: SE Primer — Tests
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Tutor 20 scenario eval
+        run: node tests/tutor-eval.mjs
+      - name: Install test dependencies
+        run: npm install --no-audit --no-fund
+      - name: Cypress E2E
+        run: |
+          python3 -m http.server 5173 --bind 127.0.0.1 > /tmp/se-primer-http.log 2>&1 &
+          sleep 2
+          curl -fsS http://127.0.0.1:5173/ > /dev/null
+          npx cypress run
+      - name: Upload Cypress videos/screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: se-primer-cypress-evidence
+          path: |
+            cypress/videos
+            cypress/screenshots
+          if-no-files-found: ignore
