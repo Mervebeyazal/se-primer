@@ -2,7 +2,7 @@
 
 **Etkileşimli mühendislik karar simülasyonu.** Sağlık randevu sistemi arızasında üç karar (mimari, test, KVKK), iki son, rol/seviye/hedef uyarlaması, her karardan sonra teknik açıklama ve cevap vermeyen Sokratik tutor.
 
-> **Durum (30.10.2026):** Bağımlılıksız çalışan uygulama hazır. Gerçek Chromium davranış testi: 8/8 karar yolu ve 2 ek kontrol **geçti**. Kural tabanlı tutor: 20/20 girdide tanımlı cevap sızdırma kalıbı görülmedi. **GitHub Actions üzerinde Cypress 11/11 geçti ve video kanıtı üretildi.** Google Stitch projesi ve Google AI Studio yayını henüz yapılmadı. Bu ayrım teslim kanıtları için önemlidir.
+> **Durum (30.10.2026):** Bağımlılıksız çalışan uygulama hazır. Gerçek Chromium davranış testi: 8/8 karar yolu ve 2 ek kontrol **geçti**. Kural tabanlı tutor: 20/20 girdide tanımlı cevap sızdırma kalıbı görülmedi. **Yeni `se-primer` deposunun `main` dalında Cypress 11/11 geçti ve video kanıtı üretildi.** Google Stitch projesi ve Google AI Studio yayını henüz yapılmadı. Bu ayrım teslim kanıtları için önemlidir.
 
 ## Hızlı çalıştırma
 
@@ -22,7 +22,7 @@ npm install                # yalnızca Cypress testleri için, ağ bağlantısı
 npm run test:e2e           # başka terminalde sunucu açıkken
 ```
 
-Cypress testleri `cypress/e2e/primer.cy.js` dosyasında 8 karar yolunu ve kritik davranışları kapsar. `cypress.config.js` test videosunu açar. CI iş akışı `.github/workflows/ci.yml` içindedir. **30 Ekim 2026 tarihli doğrulanmış Cypress koşusu: 11/11 başarılı.** [GitHub Actions kanıtı](https://github.com/Mervebeyazal/mini_recipe/actions/runs/41007152770). Video ve varsa ekran görüntüleri bu koşunun `se-primer-cypress-evidence` adlı artefaktında yer alır.
+Cypress testleri `cypress/e2e/primer.cy.js` dosyasında 8 karar yolunu ve kritik davranışları kapsar. `cypress.config.js` test videosunu açar. CI iş akışı `.github/workflows/ci.yml` içindedir. **Yeni depoda doğrulanmış Cypress koşusu: 11/11 başarılı.** [GitHub Actions kanıtı](https://github.com/Mervebeyazal/se-primer/actions/runs/41011390943). Video ve varsa ekran görüntüleri bu koşunun `se-primer-cypress-evidence` adlı artefaktında yer alır.
 
 ## Kanıtlar
 
@@ -30,7 +30,7 @@ Cypress testleri `cypress/e2e/primer.cy.js` dosyasında 8 karar yolunu ve kritik
 - Üç mobil ekran, tasarım ilkeleri ve Stitch aktarım promptu: [`DESIGN.md`](DESIGN.md), [`docs/STITCH_BRIEF.md`](docs/STITCH_BRIEF.md)
 - Tutor 20 gerçek çıktı, hata sınıfları, oran: [`docs/tutor-eval.md`](docs/tutor-eval.md)
 - Gerçek tarayıcı kontrol senaryoları: [`tests_browser.py`](tests_browser.py), [`evidence/browser-checks.json`](evidence/browser-checks.json)
-- Üç mobil ekran görüntüsü: [`design/01-intro.jpg`](design/01-intro.jpg), [`design/02-scene.jpg`](design/02-scene.jpg), [`design/03-ending.jpg`](design/03-ending.jpg)
+- Üç mobil ekran tasarım önizlemesi (Stitch üzerinde üretilmedi): [`design/01-intro.svg`](design/01-intro.jpg), [`design/02-scene.svg`](design/02-scene.jpg), [`design/03-end.svg`](design/03-ending.jpg)
 - Google AI Studio'ya aktarım açıklaması: [`docs/AI_STUDIO_BRIEF.md`](docs/AI_STUDIO_BRIEF.md)
 - 60 saniyelik oynanış videosu: teslim ZIP’inde `SE_Primer_60s_Oynanis_Demosu.mp4` (gerçek etkileşim kaydı) bulunur. Ayrıca `SE_Primer_60s_Demo.mp4` (ekran görüntüsü sunumu) içerir. **Cypress koşusu kaydı** ise GitHub Actions kanıt artefaktındadır.
 
@@ -50,7 +50,7 @@ Cypress testleri `cypress/e2e/primer.cy.js` dosyasında 8 karar yolunu ve kritik
 ### Yapılmadı (dürüst teslim sınırı)
 
 - **Üretken AI tutor:** Mevcut tutor bir LLM değil. Google AI Studio/Gemini entegrasyonu ve orada yayımlama yapılmadı.
-- **Google Stitch:** Üç mobil ekran tarayıcıdan görselleştirildi; Stitch üzerinde bağımsız proje oluşturulmadı.
+- **Google Stitch:** Üç mobil ekran için SVG önizleme oluşturuldu; Stitch üzerinde bağımsız proje oluşturulmadı.
 - **Cypress yürütme kanıtı:** Yerel ortamda Cypress binary yüklenemese de GitHub Actions koşusu doğrulandı: **11/11 test başarılı**. Ayrıca Chromium + Playwright ile 10 davranış kontrolü geçildi.
 
 ## Teslim bağlantıları
@@ -71,6 +71,6 @@ Ders PDF'i: *SE Primer — YZM301*, 2026. Cypress docs: https://docs.cypress.io.
 | Tasarım, 3 mobil ekran | Hazır (Stitch bağlantısı eksik) | `DESIGN.md`, `design/` |
 | Çalışan uygulama | Yerel doğrulandı (AI Studio bağlantısı eksik) | `index.html`, `src/` ve Chromium doğrulamaları |
 | Tutor eval 20 çıktı, hata oranı | Hazır (kural tabanlı tutor) | `docs/tutor-eval.md` |
-| Cypress tüm yollar | Başarılı, 11/11 | [CI kanıtı](https://github.com/Mervebeyazal/mini_recipe/actions/runs/41007152770) |
+| Cypress tüm yollar | Başarılı, 11/11 | [CI kanıtı](https://github.com/Mervebeyazal/se-primer/actions/runs/41011390943) |
 | 60 sn demo | Hazır | ZIP içindeki `SE_Primer_60s_Oynanis_Demosu.mp4` |
 | Ürün kararı 3 özellik | Hazır | Bu README |
