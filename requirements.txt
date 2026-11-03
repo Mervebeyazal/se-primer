@@ -1,0 +1,9 @@
+# SE Primer v2: Python bağımlılıkları (train.py, tests/parite.py, tools/)
+# Kurulum:  pip install -r requirements.txt
+# Aynı metrikleri başka makinede de üretmek için sklearn ve skl2onnx sürümleri sabittir.
+numpy
+pandas
+scikit-learn==1.9.1
+skl2onnx==1.20.0
+onnx
+onnxruntime

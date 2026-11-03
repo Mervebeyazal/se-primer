@@ -1,0 +1,41 @@
+{
+  "aciklama": "Özellik türetmenin tek doğruluk kaynağı. Hem train.py > ozellik_uret (Python) hem src/telemetry.mjs > ozellikVektoru (JS) bu dosyadaki beklenen vektörleri üretmek zorundadır. Vektör sırası: sahne_no, seviye, onceki_karar_suresi_sn, onceki_okuma_suresi_sn, onceki_tutor_soru_sayisi, onceki_ipucu_acildi, onceki_b_sayisi. null = bu sahne için model girdisi üretilmez.",
+  "oturumlar": [
+    {
+      "ad": "normal akış; 150 sn okuma 120'ye, 12 soru 10'a kırpılır",
+      "satirlar": [
+        {"oturum_id": "a00000000001", "kaynak": "gercek", "sahne_no": 1, "seviye": 0, "karar_suresi_sn": 12.3, "okuma_suresi_sn": 6.1, "tutor_soru_sayisi": 1, "ipucu_acildi": 1, "secim": "B", "sure_doldu": 0, "secim_b": 1},
+        {"oturum_id": "a00000000001", "kaynak": "gercek", "sahne_no": 2, "seviye": 0, "karar_suresi_sn": 30.0, "okuma_suresi_sn": 150.0, "tutor_soru_sayisi": 12, "ipucu_acildi": 0, "secim": "A", "sure_doldu": 0, "secim_b": 0},
+        {"oturum_id": "a00000000001", "kaynak": "gercek", "sahne_no": 3, "seviye": 0, "karar_suresi_sn": 7.7, "okuma_suresi_sn": 4.0, "tutor_soru_sayisi": 0, "ipucu_acildi": 0, "secim": "A", "sure_doldu": 0, "secim_b": 0}
+      ],
+      "beklenen": {
+        "1": null,
+        "2": [2, 0, 12.3, 6.1, 1, 1, 1],
+        "3": [3, 0, 30.0, 120.0, 10, 0, 1]
+      }
+    },
+    {
+      "ad": "deneyimli oyuncu, süre dolumu (60 sn, B) ve iki B birikimi",
+      "satirlar": [
+        {"oturum_id": "b00000000002", "kaynak": "gercek", "sahne_no": 1, "seviye": 1, "karar_suresi_sn": 60.0, "okuma_suresi_sn": 3.2, "tutor_soru_sayisi": 0, "ipucu_acildi": 0, "secim": "B", "sure_doldu": 1, "secim_b": 1},
+        {"oturum_id": "b00000000002", "kaynak": "gercek", "sahne_no": 2, "seviye": 1, "karar_suresi_sn": 9.9, "okuma_suresi_sn": 5.5, "tutor_soru_sayisi": 2, "ipucu_acildi": 1, "secim": "B", "sure_doldu": 0, "secim_b": 1},
+        {"oturum_id": "b00000000002", "kaynak": "gercek", "sahne_no": 3, "seviye": 1, "karar_suresi_sn": 22.2, "okuma_suresi_sn": 8.8, "tutor_soru_sayisi": 0, "ipucu_acildi": 0, "secim": "A", "sure_doldu": 0, "secim_b": 0}
+      ],
+      "beklenen": {
+        "1": null,
+        "2": [2, 1, 60.0, 3.2, 0, 0, 1],
+        "3": [3, 1, 9.9, 5.5, 2, 1, 2]
+      }
+    },
+    {
+      "ad": "eksik oturum: sahne 2 kaydı yok, sahne 3 için girdi üretilmez (kayma olmasın)",
+      "satirlar": [
+        {"oturum_id": "c00000000003", "kaynak": "gercek", "sahne_no": 1, "seviye": 0, "karar_suresi_sn": 14.0, "okuma_suresi_sn": 7.0, "tutor_soru_sayisi": 0, "ipucu_acildi": 0, "secim": "A", "sure_doldu": 0, "secim_b": 0},
+        {"oturum_id": "c00000000003", "kaynak": "gercek", "sahne_no": 3, "seviye": 0, "karar_suresi_sn": 11.0, "okuma_suresi_sn": 6.0, "tutor_soru_sayisi": 0, "ipucu_acildi": 0, "secim": "B", "sure_doldu": 0, "secim_b": 1}
+      ],
+      "beklenen": {
+        "3": null
+      }
+    }
+  ]
+}

@@ -4,3 +4,8 @@ cypress/videos/
 cypress/screenshots/
 .DS_Store
 .env
+
+# train.py --deneme çıktısı (yayınlanamaz)
+_out/
+__pycache__/
+*.pyc
