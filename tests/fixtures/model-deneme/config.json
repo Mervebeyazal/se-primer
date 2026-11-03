@@ -1,0 +1,117 @@
+{
+  "title": "SE Primer v2: Akış Modeli",
+  "description": "Bir sahne başlamadan önce oyuncunun riskli (B) seçeneği seçme olasılığını önceki sahnelerdeki davranışından tahmin eder. Olasılık, tutorun müdahale modunu (destek / normal / meydan) belirler.",
+  "target": "secim_b",
+  "positive_class": "1",
+  "classes": [
+    "0",
+    "1"
+  ],
+  "class_labels": {
+    "0": "A (kontrollü seçim)",
+    "1": "B (riskli seçim)"
+  },
+  "features": [
+    {
+      "name": "sahne_no",
+      "label": "Sahne no",
+      "unit": "1-3 (model 2 ve 3'te çalışır)",
+      "example": 2
+    },
+    {
+      "name": "seviye",
+      "label": "Seviye",
+      "unit": "0 yeni başlayan, 1 deneyimli",
+      "example": 0
+    },
+    {
+      "name": "onceki_karar_suresi_sn",
+      "label": "Önceki karar süresi",
+      "unit": "sn",
+      "example": 15.0
+    },
+    {
+      "name": "onceki_okuma_suresi_sn",
+      "label": "Önceki sonucu okuma süresi",
+      "unit": "sn",
+      "example": 8.0
+    },
+    {
+      "name": "onceki_tutor_soru_sayisi",
+      "label": "Önceki sahnede tutora sorulan soru",
+      "unit": "adet",
+      "example": 1
+    },
+    {
+      "name": "onceki_ipucu_acildi",
+      "label": "Önceki sahnede ipucu açıldı mı",
+      "unit": "0/1",
+      "example": 0
+    },
+    {
+      "name": "onceki_b_sayisi",
+      "label": "Şimdiye kadarki riskli (B) seçim",
+      "unit": "adet",
+      "example": 0
+    }
+  ],
+  "esik_destek": 0.6,
+  "esik_meydan": 0.25,
+  "kabul_esigi": {
+    "auc_min": 0.7,
+    "brier": "model < taban",
+    "min_gercek_oturum": 15,
+    "onnx_tolerans": 0.0001,
+    "dogrulama": "GroupKFold(5), grup=oturum_id"
+  },
+  "metrics": {
+    "auc_ortalama": 0.646,
+    "auc_kat": [
+      0.6697,
+      0.7278,
+      0.6061,
+      0.6285,
+      0.5982
+    ],
+    "gecerli_kat": 5,
+    "auc_havuz": 0.641,
+    "auc_havuz_ga95": [
+      0.5809,
+      0.7013
+    ],
+    "brier_model": 0.2375,
+    "brier_taban": 0.2513,
+    "taban_orani_b": 0.4967,
+    "mod_dagilimi": {
+      "destek": {
+        "n": 73,
+        "b_orani": 0.6438
+      },
+      "normal": {
+        "n": 224,
+        "b_orani": 0.4464
+      },
+      "meydan": {
+        "n": 3,
+        "b_orani": 0.6667
+      }
+    }
+  },
+  "onnx_maks_fark": 7.549e-08,
+  "veri": {
+    "olcum_kaynak": "sentetik",
+    "olcum_oturum": 150,
+    "olcum_satir": 300,
+    "ek_egitim_satir": 0,
+    "gercek_satir": 0,
+    "sentetik_satir": 300,
+    "veri_sha256": "f2e97133b8b61c2b187dd5825d8f6704e150f2b4cb18f35890cd230546780d54"
+  },
+  "deneme": true,
+  "kapi_gecti": false,
+  "seed": 13,
+  "sklearn_version": "1.9.1",
+  "skl2onnx_version": "1.20.0",
+  "onnxruntime_version": "1.29.0",
+  "python_version": "3.13"
+}

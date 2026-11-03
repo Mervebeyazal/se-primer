@@ -1,12 +1,14 @@
 {
   "name": "se-primer-yzm301",
-  "version": "1.1.0",
+  "version": "2.0.0",
   "description": "Mobile-first software engineering incident simulator",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "python3 -m http.server 5173",
     "test:tutor": "node tests/tutor-eval.mjs",
+    "test:ozellik": "node tests/ozellik.test.mjs",
+    "test:yayin": "node tests/yayin.test.mjs",
     "test:e2e": "cypress run"
   },
   "devDependencies": {

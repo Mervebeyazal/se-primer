@@ -8,6 +8,14 @@ export const stagePrompts = [
   'Bir hata ayıklama kaydında gerçekten gerekli olan kişisel bilgiler hangileridir?'
 ];
 
+// v2 "destek" modu: model zorlanma riskini yüksek bulduğunda tutor kendiliğinden, problemi küçük adımlara
+// bölen bir Sokratik soru sorar. Yine doğru şıkkı söylemez.
+export const destekPrompts = [
+  'Birlikte küçük adımlarla düşünelim: Yeni sürüm veritabanında neyi değiştirmiş olabilir ve eski sürüm bunu okuyabilir mi?',
+  'Birlikte küçük adımlarla düşünelim: Randevu oluşturma ve iptal akışlarının çalıştığını, sisteme bakmadan nasıl bilebilirsin?',
+  'Birlikte küçük adımlarla düşünelim: Hatanın nedenini bulmak için log satırının hangi alanları şart, hangilerini görmesen de olur?'
+];
+
 const patterns = [
   { id: 'answer_request', re: /(?:doğru|cevap|cevab[ıi]|şık|seçenek|buton|hangi\s+harf|hangisini\s+seç|a\s*m[ıi]|b\s*m[ıi])/i,
     questions: [

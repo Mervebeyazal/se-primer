@@ -1,0 +1,131 @@
+{
+  "aciklama": "Test Kahini (Python onnxruntime) referans olasılıkları. Uygulamadaki sonuç tolerans içinde aynı olmalı.",
+  "tolerans": 0.0001,
+  "model_sha256": "3f611527e66af93e5bf9cba09698ccb31dbbefcfe3b09811f2390e2457f7e599",
+  "ozellik_sirasi": [
+    "sahne_no",
+    "seviye",
+    "onceki_karar_suresi_sn",
+    "onceki_okuma_suresi_sn",
+    "onceki_tutor_soru_sayisi",
+    "onceki_ipucu_acildi",
+    "onceki_b_sayisi"
+  ],
+  "ornekler": [
+    {
+      "ad": "ortalama oyuncu",
+      "girdi": {
+        "sahne_no": 2,
+        "seviye": 0,
+        "onceki_karar_suresi_sn": 15.0,
+        "onceki_okuma_suresi_sn": 8.0,
+        "onceki_tutor_soru_sayisi": 1,
+        "onceki_ipucu_acildi": 0,
+        "onceki_b_sayisi": 0
+      },
+      "vektor": [
+        2,
+        0,
+        15.0,
+        8.0,
+        1,
+        0,
+        0
+      ],
+      "p": 0.3270636796951294,
+      "mod": "normal"
+    },
+    {
+      "ad": "hızlı ve kendinden emin",
+      "girdi": {
+        "sahne_no": 3,
+        "seviye": 1,
+        "onceki_karar_suresi_sn": 4.0,
+        "onceki_okuma_suresi_sn": 12.0,
+        "onceki_tutor_soru_sayisi": 0,
+        "onceki_ipucu_acildi": 0,
+        "onceki_b_sayisi": 0
+      },
+      "vektor": [
+        3,
+        1,
+        4.0,
+        12.0,
+        0,
+        0,
+        0
+      ],
+      "p": 0.30406454205513,
+      "mod": "normal"
+    },
+    {
+      "ad": "tereddütlü, tutora ve ipucuna başvurdu, bir B",
+      "girdi": {
+        "sahne_no": 2,
+        "seviye": 0,
+        "onceki_karar_suresi_sn": 55.0,
+        "onceki_okuma_suresi_sn": 5.0,
+        "onceki_tutor_soru_sayisi": 4,
+        "onceki_ipucu_acildi": 1,
+        "onceki_b_sayisi": 1
+      },
+      "vektor": [
+        2,
+        0,
+        55.0,
+        5.0,
+        4,
+        1,
+        1
+      ],
+      "p": 0.8236973881721497,
+      "mod": "destek"
+    },
+    {
+      "ad": "süre doldu, iki B birikti",
+      "girdi": {
+        "sahne_no": 3,
+        "seviye": 1,
+        "onceki_karar_suresi_sn": 60.0,
+        "onceki_okuma_suresi_sn": 2.0,
+        "onceki_tutor_soru_sayisi": 0,
+        "onceki_ipucu_acildi": 0,
+        "onceki_b_sayisi": 2
+      },
+      "vektor": [
+        3,
+        1,
+        60.0,
+        2.0,
+        0,
+        0,
+        2
+      ],
+      "p": 0.8101205825805664,
+      "mod": "destek"
+    },
+    {
+      "ad": "sonucu uzun okuyan, dikkatli",
+      "girdi": {
+        "sahne_no": 3,
+        "seviye": 0,
+        "onceki_karar_suresi_sn": 20.0,
+        "onceki_okuma_suresi_sn": 60.0,
+        "onceki_tutor_soru_sayisi": 2,
+        "onceki_ipucu_acildi": 1,
+        "onceki_b_sayisi": 0
+      },
+      "vektor": [
+        3,
+        0,
+        20.0,
+        60.0,
+        2,
+        1,
+        0
+      ],
+      "p": 0.4669860005378723,
+      "mod": "normal"
+    }
+  ]
+}

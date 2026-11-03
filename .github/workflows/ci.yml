@@ -13,16 +13,50 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Python bağımlılıkları
+        run: pip install -r requirements.txt
       - name: Tutor 20 scenario eval
         run: node tests/tutor-eval.mjs
+      - name: Özellik türetme ve yayın/kova mantığı (JS tarafı)
+        run: |
+          node tests/ozellik.test.mjs
+          node tests/yayin.test.mjs
+      - name: Veri doğrulama (KVKK sütun kontrolü dahil)
+        run: python tools/birlestir.py --kontrol
+      - name: train.py ve özellik türetme testleri (eval kapısı, tekrarlanabilirlik, ONNX farkı)
+        run: python -m unittest tests.test_train -v
+      - name: Tekrarlanabilirlik — CI'da yeniden eğit, metrikler birebir aynı olmalı
+        if: hashFiles('model/model.onnx') != ''
+        run: |
+          python train.py --cikti /tmp/model_ci
+          python - <<'PY'
+          import json
+          a = json.load(open('model/config.json'))
+          b = json.load(open('/tmp/model_ci/config.json'))
+          assert a['metrics'] == b['metrics'], (a['metrics'], b['metrics'])
+          assert a['veri']['veri_sha256'] == b['veri']['veri_sha256'], 'model/ başka bir veriyle eğitilmiş'
+          print('metrikler birebir aynı, AUC =', b['metrics']['auc_ortalama'])
+          PY
+      - name: Oracle doğrulaması (tests/parite.json model.onnx ile tutarlı mı)
+        if: hashFiles('tests/parite.json') != ''
+        run: python tests/parite.py
       - name: Install test dependencies
         run: npm install --no-audit --no-fund
-      - name: Cypress E2E
+      - name: Cypress E2E (v1 regresyon + model davranışı + parite)
         run: |
           python3 -m http.server 5173 --bind 127.0.0.1 > /tmp/se-primer-http.log 2>&1 &
           sleep 2
           curl -fsS http://127.0.0.1:5173/ > /dev/null
-          npx cypress run
+          if [ -f tests/parite.json ]; then
+            npx cypress run
+          else
+            echo "tests/parite.json yok (model henüz yayınlanmadı): parite spec'i atlanıyor"
+            npx cypress run --spec "cypress/e2e/primer.cy.js,cypress/e2e/model.cy.js"
+          fi
       - name: Upload Cypress videos/screenshots
         if: always()
         uses: actions/upload-artifact@v4
