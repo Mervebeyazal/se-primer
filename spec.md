@@ -61,7 +61,7 @@ flowchart TD
   `0.60` ve `0.25` değerleri `config.json` içinde `esik_destek` ve `esik_meydan` olarak taşınır.
 - **Güvenli geri düşüş:** Model yüklenemezse ya da hata verirse sahne **normal** modda ve v1 davranışıyla çalışır. Oyun asla modele bağımlı olarak kilitlenmez.
 
-### Eval metriği ve kabul eşiği (altın standart)
+### Eval metriği ve kabul eşiği (altın standart) — ölçüm düzeni v2.1 ile değişti, aşağıya bakın
 - **Doğrulama düzeni:** `GroupKFold(n_splits=5)`, grup = `oturum_id`. Aynı oturumun satırları hem eğitimde hem testte olamaz. **Başarı yalnız `kaynak = gercek` satırlarında ölçülür**; sentetik satırlar yalnız eğitim katlarında kullanılır (sentetik veriyi üreten kural kolay öğrenildiği için ölçümü şişirir).
 - **Birincil metrik:** ROC-AUC (5 katın ortalaması) **≥ 0.70**. Bir test katında yalnız tek sınıf varsa o katın AUC'si tanımsızdır, ortalamaya girmez; en az 3 geçerli kat gerekir. (Açıklama: eşik değeri değil, ölçüm tanımı; az veride bu durum kaçınılmazdır.)
 - **İkincil metrik:** Brier skoru, "her zaman eğitim sıklığını tahmin et" tabanından **daha düşük** olmalı.
@@ -70,6 +70,25 @@ flowchart TD
   - `train.py` aynı tohumla iki ayrı koşuda **birebir aynı** metrikleri üretir.
   - Değerlendirmede en az **15 gerçek oturum** bulunmalıdır; yoksa betik hata verir.
 - **Kapı:** Herhangi biri sağlanmazsa `train.py` sıfırdan farklı çıkış koduyla durur ve `model/` altına artefakt **yazılmaz**. Yayınlanmaz.
+
+### v2.1 — İlk deneme başarısız oldu; ölçüm düzeni değişti (4 Kasım 2026, ikinci veri turundan ve yeniden eğitimden ÖNCE)
+
+**Ne oldu.** Yukarıdaki kapıyla (GroupKFold(5), eğitim katlarında 300 sentetik satır) ilk gerçek veri turu (3 kişi × 5 oturum = 15 oturum, 30 modele girebilen satır) koşuldu ve kapı **geçilemedi**: AUC **0.4533** (eşik 0.70), Brier **0.2638** (taban 0.2511). `model/` yazılmadı. Çıktı `RELEASE.md`'de saklanır.
+
+**Neden (gözlem, kanıt değil).** (a) Gerçek oyuncular sahneleri hızlı tıklayarak geçti (karar süresi medyanı 1.2 sn, okuma 0.7 sn); tutor sorusu ve ipucu girdileri sabit 0. (b) Sentetik üreticinin varsayımı ("uzun düşünen B seçer") gerçek veriyle ters yönde çıktı; 300 sentetik satır 30 gerçek satırı bastırıp modeli yanlış yöne çekti.
+
+**Değişmeyenler (eşikler).** ROC-AUC ≥ **0.70**; Brier < taban; ONNX farkı ≤ 1e-4; aynı tohumla birebir tekrarlanabilirlik; en az **15 gerçek oturum**; tohum 13; model ailesi (`StandardScaler + LogisticRegression`), 7 girdi ve politika eşikleri (0.60 / 0.25). Hiçbir eşik gevşetilmedi.
+
+**Değişenler (ölçüm düzeni).**
+1. **Sentetik satırlar artık eğitime girmez.** Yalnız gerçek oturumlar. Sentetik veri yalnız boru hattını sınamak için (`--deneme`) kalır. Gerekçe: yönü gerçek veriye zıt çıktı; modele öğrenmediği bir kuralı öğretiyor.
+2. **Kapı ayrı kişilerden gelen tutulan (holdout) bir sette ölçülür.** Birinci tur (`data/oturumlar.csv`, `gercek` satırları) **geliştirme seti**dir: ilk sonucu gördük, üzerinde hata ayıkladık. İkinci tur (`data/dogrulama.csv`) **yeni kişilerden en az 15 oturum**dur; birinci turdaki kişilerden hiçbiri bu sette olmaz. Model yalnız geliştirme setinde eğitilir, kapı **yalnız doğrulama setinde** ölçülür: havuzlanmış ROC-AUC ≥ 0.70 ve Brier < geliştirme setinin B oranını tahmin eden taban. Doğrulama setinde en az **15 oturum** ve her iki sınıf bulunmalıdır.
+3. Kapı geçilirse yayınlanan model, iki turun tüm gerçek satırlarıyla yeniden eğitilir (kapıyı geçen aynı tarif, daha çok veri). Kapı sonucu yine yalnız doğrulama setinden raporlanır.
+4. Oturum kimlikleri iki sette ayrık olmalıdır (`tools/birlestir.py` aynı kimliği iki sette reddeder).
+
+**Ön kayıt (sonucu görmeden).**
+- Doğrulama seti **tek kullanımlıktır**: sonucu gördükten sonra özellik, model, eşik ya da veri politikası değiştirilip aynı sette yeniden denenmez. Kapı geçilemezse model yayınlanmaz; başarısızlık ve nedenleri `RELEASE.md` ve `README.md`'de olduğu gibi anlatılır.
+- Doğrulama setinden etikete ya da model çıktısına bakılarak oturum **çıkarılmaz**. Tek dışlama: üç sahnenin tamamı kaydedilmemiş (eksik) oturumlar.
+- Veri toplama yönergesi ikinci tur kişilerine verilir: senaryoyu gerçekten oku, normal hızında karar ver, merak için diğer seçeneği seçme; ipucu ve tutor isteğe bağlı. Kişi başı en fazla **2 oturum**, en az 8 kişi.
 
 ### Üç yeni kabul örneği (v2)
 6. **Destek:** Model `p = 0.72` döndürdüğünde (deneyimli oyuncu, sahne 2) ipucu otomatik görünür, tutor kendiliğinden bir soru sorar ve sayaç görünmez. Mod göstergesi `destek` yazar.
