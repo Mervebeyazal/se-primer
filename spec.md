@@ -90,6 +90,17 @@ flowchart TD
 - Doğrulama setinden etikete ya da model çıktısına bakılarak oturum **çıkarılmaz**. Tek dışlama: üç sahnenin tamamı kaydedilmemiş (eksik) oturumlar.
 - Veri toplama yönergesi ikinci tur kişilerine verilir: senaryoyu gerçekten oku, normal hızında karar ver, merak için diğer seçeneği seçme; ipucu ve tutor isteğe bağlı. Kişi başı en fazla **2 oturum**, en az 8 kişi.
 
+### v2.2 — Zaman yetmedi: doğrulama seti 15 oturuma ulaşmadı (4 Kasım 2026 akşamı, `train.py` doğrulama setinde HİÇ koşulmadan ÖNCE)
+
+**Durum.** İkinci turdan yalnız 3 oturum (6 modele girebilen satır) geldi; teslim 6 Kasım. Bu kadar satırda holdout AUC'si anlamsızdır. Ürün sahibi (Merve) elde olanla ilerlenmesini istedi.
+
+**Karar.** Eşikler yine değişmez: ROC-AUC ≥ 0.70, Brier < taban, ONNX ≤ 1e-4, **toplam en az 15 gerçek oturum** (elimizde 15 + 3 = 18). Ölçüm düzeni `--olcum cv` olur: iki turun **yalnız gerçek** oturumları havuzlanır, `GroupKFold(5)` (grup = oturum), sentetik yok. Yayınlanan model aynı satırlarla eğitilir.
+
+**Dürüst sınırlar (model kartına ve README'ye yazılır).**
+- Bu, bağımsız bir doğrulama **değildir**: birinci tur verisi için sonucu zaten gördük (v2.0 başarısızlığı, keşifsel gerçek-yalnız AUC 0.785), ölçüm düzenini sonradan seçiyoruz. Sonuç optimistik olabilir; güven aralığı raporlanır.
+- 36 satırlık örneklem küçüktür; sonuç kanıt değil, yalnız bir ön gösterge sayılır.
+- Kapı geçilemezse model yayınlanmaz.
+
 ### Üç yeni kabul örneği (v2)
 6. **Destek:** Model `p = 0.72` döndürdüğünde (deneyimli oyuncu, sahne 2) ipucu otomatik görünür, tutor kendiliğinden bir soru sorar ve sayaç görünmez. Mod göstergesi `destek` yazar.
 7. **Meydan:** Model `p = 0.10` döndürdüğünde (yeni başlayan oyuncu, sahne 3) ipucu gösterilmez ve sonuç ekranında "Neden?" notu çıkar. Mod göstergesi `meydan` yazar.
