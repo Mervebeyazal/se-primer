@@ -1,0 +1,10 @@
+oturum_id,kaynak,sahne_no,seviye,karar_suresi_sn,okuma_suresi_sn,tutor_soru_sayisi,ipucu_acildi,secim,sure_doldu,secim_b
+3e61fe0f5573,gercek,1,0,17.5,1.7,0,0,A,0,0
+3e61fe0f5573,gercek,2,0,11.8,5.1,0,0,B,0,1
+3e61fe0f5573,gercek,3,0,9,1.7,0,0,B,0,1
+4d9f878f9548,gercek,1,1,1,0.9,0,0,A,0,0
+4d9f878f9548,gercek,2,1,0.6,0.7,0,0,B,0,1
+4d9f878f9548,gercek,3,1,0.8,0.9,0,0,B,0,1
+7e4bb86960e3,gercek,1,0,8.1,1.5,0,0,A,0,0
+7e4bb86960e3,gercek,2,0,1.7,0.7,0,0,A,0,0
+7e4bb86960e3,gercek,3,0,2.6,0.5,0,0,A,0,0
