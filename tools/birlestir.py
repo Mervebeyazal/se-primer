@@ -3,7 +3,8 @@
 Kullanım:
   python tools/birlestir.py gelen1.csv gelen2.csv ...            # gerçek oturumları ekler
   python tools/birlestir.py --sentetik data/sentetik.csv          # sentetik satırları ekler
-  python tools/birlestir.py --kontrol                             # yalnız data/oturumlar.csv'yi doğrular
+  python tools/birlestir.py --dogrulama gelen3.csv ...            # ikinci tur: data/dogrulama.csv (yeni kişiler)
+  python tools/birlestir.py --kontrol                             # iki dosyayı doğrular, oturum kimlikleri ayrık mı bakar
 
 Doğrulama (KVKK koruması dahil): tanımsız sütun varsa reddeder (ad, e-posta, konum vb. sızmasın),
 oturum_id yalnız 12 hex olabilir, değer aralıklarını ve secim/secim_b tutarlılığını denetler.
@@ -17,7 +18,8 @@ from pathlib import Path
 
 KOLONLAR = ["oturum_id", "kaynak", "sahne_no", "seviye", "karar_suresi_sn", "okuma_suresi_sn",
             "tutor_soru_sayisi", "ipucu_acildi", "secim", "sure_doldu", "secim_b"]
-HEDEF = Path("data/oturumlar.csv")
+HEDEF = Path("data/oturumlar.csv")        # geliştirme seti (1. tur) + sentetik
+DOGRULAMA = Path("data/dogrulama.csv")    # tutulan doğrulama seti (2. tur, yeni kişiler); spec.md > v2.1
 
 
 def satir_hatasi(s):
@@ -62,15 +64,44 @@ def rapor(satirlar):
               f"{sum(1 for s in satirlar if s['kaynak'] == kaynak)} satır")
 
 
+def yaz(yol, satirlar):
+    satirlar = sorted(satirlar, key=lambda s: (s["kaynak"], s["oturum_id"], int(s["sahne_no"])))
+    yol.parent.mkdir(parents=True, exist_ok=True)
+    with yol.open("w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=KOLONLAR, lineterminator="\n")
+        w.writeheader()
+        w.writerows(satirlar)
+
+
+def dogrula(yol, satirlar):
+    for s in satirlar:
+        hata = satir_hatasi(s)
+        if hata:
+            sys.exit(f"HATA {yol}: oturum {s['oturum_id']} sahne {s['sahne_no']}: {hata}")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("dosyalar", nargs="*")
     ap.add_argument("--sentetik", action="store_true", help="gelen dosya sentetik; kaynak sütunu sentetik olmalı")
-    ap.add_argument("--kontrol", action="store_true", help="yalnız mevcut oturumlar.csv'yi doğrula")
+    ap.add_argument("--dogrulama", action="store_true", help="gelen dosyalar 2. tur (yeni kişiler): data/dogrulama.csv'ye yazılır")
+    ap.add_argument("--kontrol", action="store_true", help="yalnız mevcut dosyaları doğrula")
     a = ap.parse_args()
+    if a.sentetik and a.dogrulama:
+        ap.error("--sentetik ile --dogrulama birlikte kullanılamaz")
 
-    mevcut = oku(HEDEF) if HEDEF.exists() else []
+    gelistirme = oku(HEDEF) if HEDEF.exists() else []
+    dogrulama = oku(DOGRULAMA) if DOGRULAMA.exists() else []
+    hedef, mevcut, diger = (DOGRULAMA, dogrulama, gelistirme) if a.dogrulama else (HEDEF, gelistirme, dogrulama)
+    # Sızıntı koruması: aynı oturum kimliği iki sette birden olamaz.
+    ortak = {s["oturum_id"] for s in gelistirme} & {s["oturum_id"] for s in dogrulama}
+    if ortak:
+        sys.exit(f"HATA: {len(ortak)} oturum kimliği hem {HEDEF} hem {DOGRULAMA} içinde (veri sızıntısı): {sorted(ortak)[:3]}")
+    if any(s["kaynak"] != "gercek" for s in dogrulama):
+        sys.exit(f"HATA {DOGRULAMA}: yalnız kaynak=gercek satırları olabilir")
+
     anahtar = {(s["oturum_id"], s["sahne_no"]) for s in mevcut}
+    diger_idler = {s["oturum_id"] for s in diger}
     yeni, atlanan = [], 0
     if not a.kontrol:
         if not a.dosyalar:
@@ -83,29 +114,25 @@ def main():
                     sys.exit(f"HATA {d}: oturum {s['oturum_id']} sahne {s['sahne_no']}: {hata}")
                 if s["kaynak"] != beklenen:
                     sys.exit(f"HATA {d}: kaynak={s['kaynak']} ama {beklenen} bekleniyordu")
+                if s["oturum_id"] in diger_idler:
+                    sys.exit(f"HATA {d}: oturum {s['oturum_id']} diğer sette zaten var (geliştirme/doğrulama ayrık olmalı)")
                 if (s["oturum_id"], s["sahne_no"]) in anahtar:
                     atlanan += 1
                     continue
                 anahtar.add((s["oturum_id"], s["sahne_no"]))
                 yeni.append(s)
+        yaz(hedef, mevcut + yeni)
+        print(f"{len(yeni)} yeni satır eklendi, {atlanan} yinelenen atlandı -> {hedef}")
+        mevcut = mevcut + yeni
     else:
-        for s in mevcut:
-            hata = satir_hatasi(s)
-            if hata:
-                sys.exit(f"HATA {HEDEF}: oturum {s['oturum_id']} sahne {s['sahne_no']}: {hata}")
-
-    tum = mevcut + yeni
-    tum.sort(key=lambda s: (s["kaynak"], s["oturum_id"], int(s["sahne_no"])))
-    if not a.kontrol:
-        HEDEF.parent.mkdir(parents=True, exist_ok=True)
-        with HEDEF.open("w", newline="", encoding="utf-8") as f:
-            w = csv.DictWriter(f, fieldnames=KOLONLAR, lineterminator="\n")
-            w.writeheader()
-            w.writerows(tum)
-        print(f"{len(yeni)} yeni satır eklendi, {atlanan} yinelenen atlandı -> {HEDEF}")
-    else:
-        print(f"{HEDEF} doğrulandı.")
-    rapor(tum)
+        dogrula(HEDEF, gelistirme)
+        dogrula(DOGRULAMA, dogrulama)
+        print(f"{HEDEF} doğrulandı; {DOGRULAMA} " + ("doğrulandı; iki set ayrık." if dogrulama else "henüz yok."))
+    print(f"{HEDEF}:")
+    rapor(gelistirme if hedef != HEDEF else mevcut)
+    if dogrulama or hedef == DOGRULAMA:
+        print(f"{DOGRULAMA}:")
+        rapor(mevcut if hedef == DOGRULAMA else dogrulama)
 
 
 if __name__ == "__main__":

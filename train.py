@@ -2,7 +2,9 @@
 """SE Primer v2: "Akış Modeli" için tekrarlanabilir eğitim + eval kapısı.
 
 Tek komut:   python train.py
-Ne yapar:    data/oturumlar.csv  ->  doğrulama (kapı)  ->  model/model.onnx + model/config.json + model/README.md
+Ne yapar:    data/oturumlar.csv (gerçek satırlar, geliştirme seti) ile eğitir, kapıyı data/dogrulama.csv'de
+             (yeni kişilerden tutulan set, spec.md > v2.1) ölçer;
+             geçerse tüm gerçek satırlarla yeniden eğitip model/model.onnx + model/config.json + model/README.md yazar.
 
 KAPI: spec.md'deki kabul eşikleri sağlanmazsa betik hata koduyla durur ve model/ altına HİÇBİR ŞEY yazmaz.
 Aynı veri + aynı tohum (13) = birebir aynı metrikler, aynı config.json, aynı model.onnx (başka makinede de).
@@ -31,8 +33,8 @@ from sklearn.preprocessing import StandardScaler
 # eğitimden sonra değiştirilemez (değişirse gerekçesi RELEASE.md'de belgelenir).
 # ============================================================================================
 SEED = 13                 # proje kuralı: her yerde 13
-ESIK_AUC = 0.70           # 5 katlı grup çapraz doğrulama, ROC-AUC ortalaması >=
-MIN_GERCEK_OTURUM = 15    # değerlendirmede en az bu kadar gerçek oturum
+ESIK_AUC = 0.70           # tutulan doğrulama setinde ROC-AUC >= (--deneme'de 5 katlı grup çapraz doğrulama ortalaması)
+MIN_GERCEK_OTURUM = 15    # değerlendirme (doğrulama) setinde en az bu kadar gerçek oturum
 ONNX_TOLERANS = 1e-4      # ONNX ile sklearn arası en büyük olasılık farkı <=
 ESIK_DESTEK = 0.60        # p >= bu  -> destek modu
 ESIK_MEYDAN = 0.25        # p <= bu  -> meydan modu
@@ -40,7 +42,8 @@ N_KAT = 5
 MIN_GECERLI_KAT = 3       # AUC'si tanımlı (iki sınıf da var) en az kaç kat gerekir
 
 BURASI = Path(__file__).resolve().parent
-VERI = BURASI / "data" / "oturumlar.csv"
+VERI = BURASI / "data" / "oturumlar.csv"          # geliştirme seti (1. tur) + sentetik
+DOGRULAMA = BURASI / "data" / "dogrulama.csv"      # tutulan doğrulama seti (2. tur, yeni kişiler)
 MODEL_DIR = BURASI / "model"
 DENEME_DIR = BURASI / "_out" / "deneme"
 
@@ -107,6 +110,32 @@ def bootstrap_ga95(y, p, gruplar, n=1000):
     return [round(float(np.percentile(aucler, 2.5)), 4), round(float(np.percentile(aucler, 97.5)), 4)]
 
 
+def holdout_degerlendir(egitim: pd.DataFrame, test: pd.DataFrame) -> dict:
+    """spec.md v2.1: model yalnız `egitim` (geliştirme seti) ile eğitilir, `test` (yeni kişiler) yalnız ölçer."""
+    m = model_kur().fit(egitim[OZELLIKLER], egitim["secim_b"])
+    p = m.predict_proba(test[OZELLIKLER])[:, 1]
+    y = test["secim_b"].to_numpy()
+    taban = np.full(len(test), egitim["secim_b"].mean())
+    iki_sinif = len(set(y)) == 2
+    auc = round(float(roc_auc_score(y, p)), 4) if iki_sinif else None
+    mod_dagilimi = {}
+    for ad, maske in (("destek", p >= ESIK_DESTEK), ("normal", (p > ESIK_MEYDAN) & (p < ESIK_DESTEK)),
+                      ("meydan", p <= ESIK_MEYDAN)):
+        mod_dagilimi[ad] = {"n": int(maske.sum()), "b_orani": round(float(y[maske].mean()), 4) if maske.any() else None}
+    return {
+        "yontem": "holdout",
+        "auc_ortalama": auc,
+        "auc_kat": [auc],
+        "gecerli_kat": 1 if iki_sinif else 0,
+        "auc_havuz": auc,
+        "auc_havuz_ga95": bootstrap_ga95(y, p, test["oturum_id"].to_numpy()) if iki_sinif else None,
+        "brier_model": round(float(brier_score_loss(y, p)), 4),
+        "brier_taban": round(float(brier_score_loss(y, taban)), 4),
+        "taban_orani_b": round(float(egitim["secim_b"].mean()), 4),
+        "mod_dagilimi": mod_dagilimi,
+    }
+
+
 def degerlendir(olcum: pd.DataFrame, ek_egitim: pd.DataFrame) -> dict:
     """GroupKFold(5), grup = oturum. `olcum` satırları yalnız test katında; `ek_egitim` yalnız eğitim katlarında."""
     oof = np.full(len(olcum), np.nan)
@@ -128,6 +157,7 @@ def degerlendir(olcum: pd.DataFrame, ek_egitim: pd.DataFrame) -> dict:
                       ("meydan", oof <= ESIK_MEYDAN)):
         mod_dagilimi[ad] = {"n": int(maske.sum()), "b_orani": round(float(y[maske].mean()), 4) if maske.any() else None}
     return {
+        "yontem": "groupkfold",
         "auc_ortalama": round(float(np.mean(gecerli)), 4) if gecerli else None,
         "auc_kat": [None if a is None else round(a, 4) for a in kat_auc],
         "gecerli_kat": len(gecerli),
@@ -146,7 +176,12 @@ def kapi(metrik: dict, olcum: pd.DataFrame) -> list:
     n_oturum = olcum["oturum_id"].nunique()
     if n_oturum < MIN_GERCEK_OTURUM:
         hatalar.append(f"değerlendirmede {n_oturum} oturum var; en az {MIN_GERCEK_OTURUM} gerekli")
-    if metrik["gecerli_kat"] < MIN_GECERLI_KAT:
+    if metrik["yontem"] == "holdout":
+        if metrik["auc_ortalama"] is None:
+            hatalar.append("doğrulama setinde iki sınıf (A ve B) da yok; AUC tanımsız")
+        elif metrik["auc_ortalama"] < ESIK_AUC:
+            hatalar.append(f"AUC {metrik['auc_ortalama']:.4f} < eşik {ESIK_AUC} (tutulan doğrulama seti)")
+    elif metrik["gecerli_kat"] < MIN_GECERLI_KAT:
         hatalar.append(f"AUC'si tanımlı kat sayısı {metrik['gecerli_kat']} < {MIN_GECERLI_KAT} (kat başına iki sınıf da gerekir)")
     elif metrik["auc_ortalama"] < ESIK_AUC:
         hatalar.append(f"AUC {metrik['auc_ortalama']:.4f} < eşik {ESIK_AUC}")
@@ -188,7 +223,8 @@ def config_yaz(hedef: Path, metrik: dict, onnx_fark: float, veri_ozet: dict, den
         "esik_destek": ESIK_DESTEK,
         "esik_meydan": ESIK_MEYDAN,
         "kabul_esigi": {"auc_min": ESIK_AUC, "brier": "model < taban", "min_gercek_oturum": MIN_GERCEK_OTURUM,
-                        "onnx_tolerans": ONNX_TOLERANS, "dogrulama": f"GroupKFold({N_KAT}), grup=oturum_id"},
+                        "onnx_tolerans": ONNX_TOLERANS, "dogrulama": ("tutulan doğrulama seti (yeni kişiler), spec.md v2.1" if metrik["yontem"] == "holdout"
+                                      else f"GroupKFold({N_KAT}), grup=oturum_id (yalnız --deneme)")},
         "metrics": metrik,
         "onnx_maks_fark": float(f"{onnx_fark:.3e}"),
         "veri": veri_ozet,
@@ -209,6 +245,19 @@ def model_karti(c: dict) -> str:
     ga = m["auc_havuz_ga95"]
     dagilim = "\n".join(f"| {ad} | {d['n']} | {'-' if d['b_orani'] is None else d['b_orani']} |"
                         for ad, d in m["mod_dagilimi"].items())
+    if m["yontem"] == "holdout":
+        veri_maddesi = (f"- **Eğitim (geliştirme seti):** ilk tur, {v['egitim_oturum']} gerçek oturum ({v['egitim_satir']} modele girebilen satır). Sentetik veri eğitime **girmez**.\n"
+                        f"- **Doğrulama (tutulan set):** ikinci tur, birinci turdakilerden farklı kişilerden **{v['olcum_oturum']}** gerçek oturum ({v['olcum_satir']} karar satırı); model bu setten hiçbir şey öğrenmeden ölçülür. `data/dogrulama.csv` SHA-256: `{v['dogrulama_sha256'][:16]}…`.\n"
+                        f"- Kapı geçildiği için yayınlanan model iki turun tüm gerçek satırlarıyla ({v['gercek_satir']} satır) yeniden eğitildi; bu yeniden eğitimin kendi ölçümü yoktur, kapı sonucu yukarıdaki doğrulama setindendir.")
+        dogrulama_metni = ("Doğrulama: model yalnız geliştirme setinde eğitilir, **yeni kişilerden oluşan tutulan sette** ölçülür (`spec.md` v2.1). "
+                           "İlk deneme (GroupKFold + sentetik eğitim) kapıyı geçemedi (AUC 0.4533); ayrıntı `RELEASE.md`'de. Doğrulama seti tek kullanımlıktır, sonucu görüldükten sonra ayar yapılmadı.")
+        ga_metin = f"oturum bootstrap %95 aralığı: {ga[0]} – {ga[1]}" if ga else "tanımsız"
+        auc_satirlari = (f'| ROC-AUC (tutulan doğrulama seti) | **{m["auc_ortalama"]}** ({ga_metin}) | ≥ {c["kabul_esigi"]["auc_min"]} |')
+    else:
+        veri_maddesi = (f"- Değerlendirmede kullanılan **{v['olcum_kaynak']}** oturum: **{v['olcum_oturum']}** ({v['olcum_satir']} karar satırı). Eğitim katlarına ek olarak {v['ek_egitim_satir']} sentetik satır girdi (üretici kural `tools/sentetik_uret.py` başında).")
+        dogrulama_metni = (f"Doğrulama: `GroupKFold({N_KAT})`, grup = oturum (bir oturumun satırları hem eğitimde hem testte olmaz). Yalnız `{v['olcum_kaynak']}` satırlarda ölçülür.")
+        auc_satirlari = (f'| ROC-AUC (geçerli katların ortalaması, {m["gecerli_kat"]}/{N_KAT} kat) | **{m["auc_ortalama"]}** | ≥ {c["kabul_esigi"]["auc_min"]} |\n'
+                         f'| ROC-AUC (tüm test tahminleri havuzlanmış) | {m["auc_havuz"]} (oturum bootstrap %95 aralığı: {ga[0]} – {ga[1]}) | bilgi |')
     uyari = (f"\n> ⚠️ **DENEME ÇIKTISI.** Değerlendirme sentetik veride yapıldı, eval kapısı {'geçti' if c['kapi_gecti'] else 'GEÇİLEMEDİ'}; bu model yayınlanamaz.\n"
              if c["deneme"] else "")
     return f"""---
@@ -238,16 +287,15 @@ Eşikler: destek `p ≥ {c["esik_destek"]}`, meydan `p ≤ {c["esik_meydan"]}` (
 
 ## Veri
 - Kaynak: SE Primer veri toplama modu. Gerçek oturumlar tanıdık kişilerden, rastgele oturum kimliğiyle toplandı; ad, e-posta, cihaz kimliği, konum ve serbest metin **yoktur**.
-- Değerlendirmede kullanılan **{v["olcum_kaynak"]}** oturum: **{v["olcum_oturum"]}** ({v["olcum_satir"]} karar satırı). Eğitim katlarına ek olarak {v["ek_egitim_satir"]} sentetik satır girdi (üretici kural `tools/sentetik_uret.py` başında). Son model, eğitime uygun tüm satırlarla ({v["gercek_satir"]} gerçek + {v["sentetik_satir"]} sentetik) yeniden eğitilir.
+{veri_maddesi}
 - `data/oturumlar.csv` SHA-256: `{v["veri_sha256"][:16]}…` (tam değer `config.json`'da).
 
 ## Metrikler (kabul eşiği eğitimden önce `spec.md`'de yazıldı)
-Doğrulama: `GroupKFold({N_KAT})`, grup = oturum (bir oturumun satırları hem eğitimde hem testte olmaz). **Yalnız gerçek satırlarda ölçülür**; sentetik satırlar yalnız eğitim katlarındadır.
+{dogrulama_metni}
 
 | Metrik | Değer | Eşik |
 |---|---|---|
-| ROC-AUC (geçerli katların ortalaması, {m["gecerli_kat"]}/{N_KAT} kat) | **{m["auc_ortalama"]}** | ≥ {c["kabul_esigi"]["auc_min"]} |
-| ROC-AUC (tüm test tahminleri havuzlanmış) | {m["auc_havuz"]} (oturum bootstrap %95 aralığı: {ga[0]} – {ga[1]}) | bilgi |
+{auc_satirlari}
 | Brier skoru (model) | {m["brier_model"]} | taban ({m["brier_taban"]}) altında |
 | B seçim oranı (taban) | {m["taban_orani_b"]} | bilgi |
 | ONNX ↔ sklearn en büyük olasılık farkı | {c["onnx_maks_fark"]} | ≤ {c["kabul_esigi"]["onnx_tolerans"]} |
@@ -284,32 +332,47 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--deneme", action="store_true",
                     help="değerlendirmeyi sentetik veride yap; kapı geçilemese de paketlemeyi dene; çıktıyı _out/deneme/ altına yaz")
-    ap.add_argument("--veri", default=str(VERI), help="girdi CSV (varsayılan data/oturumlar.csv); testler için")
+    ap.add_argument("--veri", default=str(VERI), help="geliştirme seti CSV (varsayılan data/oturumlar.csv); testler için")
+    ap.add_argument("--dogrulama", default=str(DOGRULAMA), help="tutulan doğrulama seti CSV (varsayılan data/dogrulama.csv)")
     ap.add_argument("--cikti", default=None, help="çıktı klasörü (varsayılan model/, --deneme ile _out/deneme/); testler için")
     a = ap.parse_args()
 
     ham, ozellikler, veri_sha = veri_yukle(Path(a.veri))
     gercek = ozellikler[ozellikler["kaynak"] == "gercek"].reset_index(drop=True)
     sentetik = ozellikler[ozellikler["kaynak"] == "sentetik"].reset_index(drop=True)
+    dogrulama, dogrulama_sha = gercek.iloc[0:0], None
 
     if a.deneme:
         olcum, ek_egitim, hedef = sentetik, sentetik.iloc[0:0], DENEME_DIR
         print("⚠ DENEME: değerlendirme sentetik veride; çıktı yayınlanamaz.")
     else:
-        olcum, ek_egitim, hedef = gercek, sentetik, MODEL_DIR
+        yol = Path(a.dogrulama)
+        if not yol.exists():
+            sys.exit(f"✗ Doğrulama seti yok: {yol}. Yeni kişilerden en az {MIN_GERCEK_OTURUM} oturum toplayıp "
+                     f"`python tools/birlestir.py --dogrulama gelen.csv` ile ekleyin (spec.md > v2.1).")
+        dogrulama_ham, dogrulama, dogrulama_sha = veri_yukle(yol)
+        if (dogrulama_ham["kaynak"] != "gercek").any():
+            sys.exit("✗ Doğrulama setinde yalnız kaynak=gercek satırları olabilir.")
+        ortak = set(ham["oturum_id"]) & set(dogrulama_ham["oturum_id"])
+        if ortak:
+            sys.exit(f"✗ {len(ortak)} oturum kimliği hem geliştirme hem doğrulama setinde (sızıntı).")
+        olcum, ek_egitim, hedef = dogrulama, gercek.iloc[0:0], MODEL_DIR  # kapı: gerçek geliştirme satırlarıyla eğit, doğrulamada ölç
     if a.cikti:
         hedef = Path(a.cikti)
 
-    print(f"Veri: {ham['oturum_id'].nunique()} oturum; modele giren satır: gerçek {len(gercek)}, sentetik {len(sentetik)}")
+    print(f"Geliştirme: {ham['oturum_id'].nunique()} oturum; modele giren satır: gerçek {len(gercek)}, sentetik {len(sentetik)} "
+          f"({'sentetik eğitime girmez' if not a.deneme else 'deneme'}) | doğrulama: {len(dogrulama)} satır")
     if len(olcum) == 0:
-        sys.exit("✗ Değerlendirilecek gerçek satır yok. Gerçek oturum ekleyin (python tools/birlestir.py gelen.csv).")
+        sys.exit("✗ Değerlendirilecek gerçek satır yok. Gerçek oturum ekleyin (python tools/birlestir.py --dogrulama gelen.csv).")
 
-    metrik = degerlendir(olcum, ek_egitim)
-    if degerlendir(olcum, ek_egitim) != metrik:  # tekrarlanabilirlik: aynı tohum, aynı sonuç
+    def olc():
+        return degerlendir(olcum, ek_egitim) if a.deneme else holdout_degerlendir(gercek, dogrulama)
+
+    metrik = olc()
+    if olc() != metrik:  # tekrarlanabilirlik: aynı tohum, aynı sonuç
         sys.exit("✗ Tekrarlanabilirlik bozuk: iki koşu farklı metrik verdi.")
 
-    print(f"AUC (kat ort.) {metrik['auc_ortalama']}  katlar {metrik['auc_kat']}  | havuz {metrik['auc_havuz']} "
-          f"GA95 {metrik['auc_havuz_ga95']}  | Brier {metrik['brier_model']} (taban {metrik['brier_taban']})")
+    print(f"AUC {metrik['auc_ortalama']}  | GA95 {metrik['auc_havuz_ga95']}  | Brier {metrik['brier_model']} (taban {metrik['brier_taban']})")
     hatalar = kapi(metrik, olcum)
     if hatalar and not a.deneme:
         print("✗ EVAL KAPISI GEÇİLEMEDİ, artefakt yazılmadı:")
@@ -321,8 +384,9 @@ def main():
         for h in hatalar:
             print(f"   - {h}")
 
-    # Kapı geçildi: son model tüm uygun satırlarla eğitilir.
-    egitim = pd.concat([gercek, sentetik], ignore_index=True)
+    # Kapı geçildi: son model eğitime uygun tüm satırlarla eğitilir.
+    # --deneme: gerçek + sentetik (eski davranış). Gerçek mod (v2.1): iki turun gerçek satırları, sentetik yok.
+    egitim = pd.concat([gercek, sentetik] if a.deneme else [gercek, dogrulama], ignore_index=True)
     model = model_kur().fit(egitim[OZELLIKLER], egitim["secim_b"])
     hedef.mkdir(parents=True, exist_ok=True)
     fark = onnx_aktar(model, egitim[OZELLIKLER], hedef)
@@ -332,7 +396,10 @@ def main():
     veri_ozet = {"olcum_kaynak": "sentetik" if a.deneme else "gercek",
                  "olcum_oturum": int(olcum["oturum_id"].nunique()), "olcum_satir": int(len(olcum)),
                  "ek_egitim_satir": int(len(ek_egitim)),
-                 "gercek_satir": int(len(gercek)), "sentetik_satir": int(len(sentetik)), "veri_sha256": veri_sha}
+                 "egitim_oturum": int(gercek["oturum_id"].nunique()), "egitim_satir": int(len(gercek)),
+                 "gercek_satir": int(len(egitim) - (len(sentetik) if a.deneme else 0)),
+                 "sentetik_satir": int(len(sentetik)) if a.deneme else 0,
+                 "veri_sha256": veri_sha, "dogrulama_sha256": dogrulama_sha}
     config = config_yaz(hedef, metrik, fark, veri_ozet, a.deneme, kapi_gecti=not hatalar)
     (hedef / "README.md").write_text(model_karti(config), encoding="utf-8")
     durum = "Eval kapısı geçti." if not hatalar else "DENEME çıktısı (kapı geçmedi, yayınlanamaz)."

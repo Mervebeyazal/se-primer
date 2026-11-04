@@ -105,3 +105,27 @@ Breck vd. (2017) ML Test Score rubriğinin dört başlığına göre elimizdekil
 - Hugging Face Hub belgeleri (`resolve/<revision>`), ONNX Runtime (`onnxruntime-web`).
 
 > ⚠️ Bu belge yazılırken bu kaynakların **yalnız kavramsal çerçevesi** (3V, model kartı, test rubriği, V&V) kullanıldı; sayfa/bölüm düzeyinde alıntı yapılmadı. Teslimden önce kaynaklara inip bu bölümdeki atıfları kendi okumanla doğrulayın.
+
+## 8. İlk eğitim denemesi başarısız oldu ve neden ölçüm düzenini değiştirdik
+
+Kronoloji (git geçmişi kanıttır): `spec.md` eşikleri eğitimden önce yazıldı (9c12a51) → ilk gerçek veriyle `python train.py` koşuldu → kapı geçilemedi → ölçüm düzeni v2.1 olarak ikinci tur veriden ve yeniden eğitimden **önce** `spec.md`'ye yazıldı (687b0e0).
+
+**Sonuç (v2.0 düzeni: 15 gerçek oturum, 30 modele girebilen satır, GroupKFold(5), eğitim katlarında 300 sentetik satır):**
+
+| Metrik | Değer | Eşik |
+|---|---|---|
+| ROC-AUC (kat ortalaması) | **0.4533** | ≥ 0.70 → **kaldı** |
+| Brier (model / taban) | 0.2638 / 0.2511 | model < taban → **kaldı** |
+
+`model/` yazılmadı, hiçbir şey yayınlanmadı.
+
+**Gözlemler (neden olduğu kanıtlanmış değil, olası açıklamalar):**
+- Oyuncular sahneleri hızlı tıklayarak geçti: karar süresi medyanı 1.2 sn, okuma süresi medyanı 0.7 sn (okuma satırlarının %96'sı 2 sn altında). Tutor sorusu ve ipucu girdileri hiç kullanılmadı, yani 7 girdinin 2'si sabit 0.
+- Sentetik üreticinin varsayımı ("uzun düşünen B seçer") gerçek veride ters yönde göründü (tek özellik AUC'si karar süresi için 0.32, okuma süresi için 0.15). 300 sentetik satır 30 gerçek satırı bastırdı.
+- Aynı kişilerin art arda 5 oturumu bağımsız olmayabilir (merak için diğer seçeneği deneme). B oranı sahne sırasıyla 0.27 → 0.40 → 0.53 yükseldi.
+
+**Bilerek yapmadığımız şey.** Başarısız sonucu gördükten sonra sentetik veriyi çıkarıp aynı 15 oturumda yeniden ölçmek AUC 0.785 verdi (güven aralığı 0.45–0.88, n = 30). Bu sayıyı **yayın gerekçesi olarak kullanmadık**: sonucu görüp ayar yaptığımız için iyimserdir ve aralık 0.5'i içerir. Eşikler (0.70, Brier < taban, 1e-4, 15 oturum) hiçbir zaman gevşetilmedi.
+
+**Karar (spec v2.1).** (1) Sentetik veri eğitimden çıkarıldı (yönü gerçekle çelişiyor). (2) Birinci tur veri **geliştirme seti** sayıldı. (3) Kapı, birinci turdakilerden farklı kişilerin ikinci tur oturumlarından oluşan **tutulan sette** ölçülür; set tek kullanımlıktır. (4) Veri toplama yönergesi ve dışlama kuralı sonucu görmeden yazıldı. İkinci turun sonucu bu bölümün altına olduğu gibi eklenecektir (geçse de kalsa da).
+
+**İkinci tur sonucu:** ⚠️ DOLDURULACAK (ikinci tur veri toplandıktan ve `python train.py` koşulduktan sonra).

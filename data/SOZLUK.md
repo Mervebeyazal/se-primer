@@ -38,7 +38,8 @@ Sahne 1 satırları dosyada durur (oyunun tam kaydı), ama geçmiş davranış o
 1. Uygulamayı `…/index.html?veri=1` adresiyle aç (veri toplama modu; girişte uyarı notu çıkar).
 2. Kişiye normal oynat. Aynı sekmede birden çok oturum oynanabilir; kayıtlar tarayıcıda birikir.
 3. Bittiğinde bitiş ekranındaki **CSV İNDİR** düğmesine bas ve dosyayı sana göndermesini iste (içinde kişisel bilgi yoktur).
-4. `python tools/birlestir.py gelen.csv` ile doğrulayıp `data/oturumlar.csv`'ye ekle.
+4. 1. tur: `python tools/birlestir.py gelen.csv` ile doğrulayıp `data/oturumlar.csv`'ye ekle (geliştirme seti).
+   2. tur (farklı kişiler, tutulan doğrulama seti): `python tools/birlestir.py --dogrulama gelen.csv` -> `data/dogrulama.csv`. Aynı `oturum_id` iki sette bulunamaz.
 
 ## Sentetik veri
 

@@ -15,7 +15,7 @@
 
 ```bash
 pip install -r requirements.txt     # 1) Python bağımlılıkları (scikit-learn 1.9.1 ve skl2onnx 1.20.0 sabit)
-python train.py                      # 2) data/oturumlar.csv -> eval kapısı -> model/{model.onnx, config.json, README.md}
+python train.py                      # 2) data/oturumlar.csv ile eğit, data/dogrulama.csv'de kapıyı ölç -> model/{model.onnx, config.json, README.md}
 python3 -m http.server 5173          # 3) http://localhost:5173  (ES modülleri için file:// değil, HTTP gerekir)
 ```
 
@@ -44,13 +44,14 @@ oyuncu davranışı ─► özellikler (7 sayı) ─► model.onnx (tarayıcıda
 **Gerçek oturumlar.** Uygulamayı `…/index.html?veri=1` ile açıp arkadaşlara oynatın (aynı sekmede birden çok oturum birikir). Bitiş ekranında **CSV İNDİR**. Gelen dosyayı doğrulayıp ekleyin:
 
 ```bash
-python tools/birlestir.py gelen1.csv gelen2.csv     # şema + KVKK denetimi, yinelenenleri atlar
-python tools/birlestir.py --kontrol                  # oturum sayılarını raporlar
+python tools/birlestir.py gelen1.csv gelen2.csv                # 1. tur (geliştirme seti): data/oturumlar.csv
+python tools/birlestir.py --dogrulama gelen3.csv gelen4.csv    # 2. tur (YENİ kişiler, tutulan set): data/dogrulama.csv
+python tools/birlestir.py --kontrol                            # sayıları raporlar; iki set ayrık mı denetler (aynı oturum kimliği iki sette olamaz)
 ```
 
 **KVKK.** Ad, e-posta, cihaz kimliği, konum, IP ve tutora yazılan serbest metin **hiçbir zaman** kaydedilmez. `oturum_id` tarayıcıda rastgele üretilen 12 hex karakterdir. `birlestir.py` tanımsız sütun içeren (örn. `email`) dosyayı reddeder.
 
-**Sentetik veri.** Gerçek oturumlar toplanırken hattı kurmak ve eğitim kümesini büyütmek için kullanılır. **Ölçüme girmez** (aşağıda). Üretici: `tools/sentetik_uret.py --oturum 150 --tohum 13`; aynı tohum birebir aynı dosyayı verir. Kural (tam metin dosyanın başında):
+**Sentetik veri.** Gerçek oturumlar toplanırken hattı kurmak (`train.py --deneme`, testler) için kullanılır. **Ne eğitime ne ölçüme girer** (v2.1: üreticinin "uzun düşünen B seçer" varsayımı gerçek veriyle ters çıktı; aşağıda). Üretici: `tools/sentetik_uret.py --oturum 150 --tohum 13`; aynı tohum birebir aynı dosyayı verir. Kural (tam metin dosyanın başında):
 
 - Her oturumun gizli bir becerisi vardır: `s ~ N(0,1)`; `seviye ~ Bernoulli(0.4)`.
 - Karar süresi `LogNormal(ln15 − 0.35·s, 0.45)`, okuma süresi `LogNormal(ln8 + 0.25·s, 0.50)`, tutor sorusu `Poisson(exp(−0.6 − 0.4·s))`, ipucu `Bernoulli(σ(−0.4 − 0.6·s))`.
@@ -61,8 +62,9 @@ python tools/birlestir.py --kontrol                  # oturum sayılarını rapo
 
 `python train.py` tek komuttur ve tohum 13 sabittir. Aynı veri ile her ortamda **birebir aynı metrikleri** üretir (CI yeniden eğitip karşılaştırır).
 
-- **Kabul eşiği `spec.md`'de eğitimden önce yazıldı:** 5 katlı grup çapraz doğrulama (grup = oturum; bir oturum hem eğitimde hem testte olamaz), ROC-AUC ≥ **0.70**, Brier skoru "hep taban oranı tahmin et"ten düşük, ONNX farkı ≤ **1e-4**, en az **15 gerçek oturum**.
-- **Başarı yalnız `gercek` satırlarda ölçülür.** Sentetik satırlar yalnız eğitim katlarında yer alır; üretici kuralı kolay öğrenildiği için ölçümü şişirirdi.
+- **Kabul eşiği `spec.md`'de eğitimden önce yazıldı:** ROC-AUC ≥ **0.70**, Brier skoru "hep taban oranı tahmin et"ten düşük, ONNX farkı ≤ **1e-4**, doğrulamada en az **15 gerçek oturum**.
+- **Ölçüm düzeni (spec v2.1):** model yalnız birinci turun gerçek oturumlarıyla (`data/oturumlar.csv`) eğitilir; kapı, **farklı kişilerden gelen** tutulan sette (`data/dogrulama.csv`) ölçülür. Doğrulama seti tek kullanımlıktır; sonucu görüp ayar yapılmaz. Kapı geçilirse yayınlanan model iki turun tüm gerçek satırlarıyla yeniden eğitilir.
+- **İlk deneme başarısız oldu (dürüst kayıt).** v2.0 düzeni (5 katlı grup çapraz doğrulama + eğitime 300 sentetik satır) 15 gerçek oturumda AUC **0.4533** verdi (eşik 0.70) ve Brier tabandan kötüydü; `model/` yazılmadı. Eşikler gevşetilmedi, ölçüm düzeni v2.1 olarak ikinci tur veriden ve yeniden eğitimden **önce** `spec.md`'ye yazıldı. Ayrıntı: `RELEASE.md` § 8.
 - Eşik altındaysa betik **hata koduyla durur ve `model/` altına hiçbir şey yazmaz** (`tests/test_train.py` bunu sınar).
 - AUC'si tanımlı olmayan kat (test katında tek sınıf) ortalamaya girmez; en az 3 geçerli kat gerekir. Havuzlanmış AUC ve oturum bazlı bootstrap %95 aralığı da raporlanır.
 - `--deneme` bayrağı gerçek veri yokken hattı sınamak içindir: çıktı `_out/deneme/` altına yazılır, "yayınlanamaz" diye işaretlenir.
