@@ -128,4 +128,4 @@ Kronoloji (git geçmişi kanıttır): `spec.md` eşikleri eğitimden önce yazı
 
 **Karar (spec v2.1).** (1) Sentetik veri eğitimden çıkarıldı (yönü gerçekle çelişiyor). (2) Birinci tur veri **geliştirme seti** sayıldı. (3) Kapı, birinci turdakilerden farklı kişilerin ikinci tur oturumlarından oluşan **tutulan sette** ölçülür; set tek kullanımlıktır. (4) Veri toplama yönergesi ve dışlama kuralı sonucu görmeden yazıldı. İkinci turun sonucu bu bölümün altına olduğu gibi eklenecektir (geçse de kalsa da).
 
-**İkinci tur sonucu:** ⚠️ DOLDURULACAK (ikinci tur veri toplandıktan ve `python train.py` koşulduktan sonra).
+**İkinci tur sonucu.** Doğrulama seti 15 oturuma ulaşmadı (3 oturum); spec v2.2 ile ölçüm, iki turun 18 gerçek oturumu üzerinde havuzlanmış GroupKFold(5)'e çevrildi (`python train.py --olcum cv`, eşikler aynı, `train.py` koşmadan önce commit'lendi). Sonuç: **AUC 0.3664** (GA95 0.18–0.57), Brier 0.3369 / taban 0.2634. Kapı **geçilemedi**, `model/` yazılmadı, model yayınlanmadı. Sonuç görüldükten sonra özellik, model ya da eşik değiştirilmedi.

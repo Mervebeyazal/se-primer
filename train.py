@@ -254,7 +254,7 @@ def model_karti(c: dict) -> str:
         ga_metin = f"oturum bootstrap %95 aralığı: {ga[0]} – {ga[1]}" if ga else "tanımsız"
         auc_satirlari = (f'| ROC-AUC (tutulan doğrulama seti) | **{m["auc_ortalama"]}** ({ga_metin}) | ≥ {c["kabul_esigi"]["auc_min"]} |')
     else:
-        veri_maddesi = (f"- Değerlendirmede kullanılan **{v['olcum_kaynak']}** oturum: **{v['olcum_oturum']}** ({v['olcum_satir']} karar satırı). Eğitim katlarına ek olarak {v['ek_egitim_satir']} sentetik satır girdi (üretici kural `tools/sentetik_uret.py` başında).")
+        veri_maddesi = (f"- Değerlendirmede kullanılan **{v['olcum_kaynak']}** oturum: **{v['olcum_oturum']}** ({v['olcum_satir']} karar satırı). " + (f"Eğitim katlarına ek olarak {v['ek_egitim_satir']} sentetik satır girdi (üretici kural `tools/sentetik_uret.py` başında)." if v['ek_egitim_satir'] else "İki turun gerçek oturumları havuzlanmıştır (spec v2.2); sentetik veri kullanılmadı. **Bu bağımsız bir doğrulama değildir**: ölçüm düzeni ilk sonuçlar görüldükten sonra seçildi, sonuç iyimser olabilir."))
         dogrulama_metni = (f"Doğrulama: `GroupKFold({N_KAT})`, grup = oturum (bir oturumun satırları hem eğitimde hem testte olmaz). Yalnız `{v['olcum_kaynak']}` satırlarda ölçülür.")
         auc_satirlari = (f'| ROC-AUC (geçerli katların ortalaması, {m["gecerli_kat"]}/{N_KAT} kat) | **{m["auc_ortalama"]}** | ≥ {c["kabul_esigi"]["auc_min"]} |\n'
                          f'| ROC-AUC (tüm test tahminleri havuzlanmış) | {m["auc_havuz"]} (oturum bootstrap %95 aralığı: {ga[0]} – {ga[1]}) | bilgi |')
@@ -334,6 +334,8 @@ def main():
                     help="değerlendirmeyi sentetik veride yap; kapı geçilemese de paketlemeyi dene; çıktıyı _out/deneme/ altına yaz")
     ap.add_argument("--veri", default=str(VERI), help="geliştirme seti CSV (varsayılan data/oturumlar.csv); testler için")
     ap.add_argument("--dogrulama", default=str(DOGRULAMA), help="tutulan doğrulama seti CSV (varsayılan data/dogrulama.csv)")
+    ap.add_argument("--olcum", choices=["holdout", "cv"], default="holdout",
+                    help="holdout: tutulan doğrulama seti (spec v2.1). cv: iki turun gerçek oturumları havuzlanır, GroupKFold(5) (spec v2.2)")
     ap.add_argument("--cikti", default=None, help="çıktı klasörü (varsayılan model/, --deneme ile _out/deneme/); testler için")
     a = ap.parse_args()
 
@@ -357,6 +359,8 @@ def main():
         if ortak:
             sys.exit(f"✗ {len(ortak)} oturum kimliği hem geliştirme hem doğrulama setinde (sızıntı).")
         olcum, ek_egitim, hedef = dogrulama, gercek.iloc[0:0], MODEL_DIR  # kapı: gerçek geliştirme satırlarıyla eğit, doğrulamada ölç
+        if a.olcum == "cv":  # spec v2.2: havuzlanmış gerçek oturumlar, sentetik yok
+            olcum = pd.concat([gercek, dogrulama], ignore_index=True)
     if a.cikti:
         hedef = Path(a.cikti)
 
@@ -366,7 +370,9 @@ def main():
         sys.exit("✗ Değerlendirilecek gerçek satır yok. Gerçek oturum ekleyin (python tools/birlestir.py --dogrulama gelen.csv).")
 
     def olc():
-        return degerlendir(olcum, ek_egitim) if a.deneme else holdout_degerlendir(gercek, dogrulama)
+        if a.deneme or a.olcum == "cv":
+            return degerlendir(olcum, ek_egitim)
+        return holdout_degerlendir(gercek, dogrulama)
 
     metrik = olc()
     if olc() != metrik:  # tekrarlanabilirlik: aynı tohum, aynı sonuç
