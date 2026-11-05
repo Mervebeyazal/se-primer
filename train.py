@@ -258,7 +258,7 @@ def model_karti(c: dict) -> str:
         dogrulama_metni = (f"Doğrulama: `GroupKFold({N_KAT})`, grup = oturum (bir oturumun satırları hem eğitimde hem testte olmaz). Yalnız `{v['olcum_kaynak']}` satırlarda ölçülür.")
         auc_satirlari = (f'| ROC-AUC (geçerli katların ortalaması, {m["gecerli_kat"]}/{N_KAT} kat) | **{m["auc_ortalama"]}** | ≥ {c["kabul_esigi"]["auc_min"]} |\n'
                          f'| ROC-AUC (tüm test tahminleri havuzlanmış) | {m["auc_havuz"]} (oturum bootstrap %95 aralığı: {ga[0]} – {ga[1]}) | bilgi |')
-    uyari = (f"\n> ⚠️ **DENEME ÇIKTISI.** Değerlendirme sentetik veride yapıldı, eval kapısı {'geçti' if c['kapi_gecti'] else 'GEÇİLEMEDİ'}; bu model yayınlanamaz.\n"
+    uyari = (f"\n> ⚠️ **DENEME ÇIKTISI.** Değerlendirme {"sentetik" if v["olcum_kaynak"] == "sentetik" else "18 gerçek oturumda havuzlanmış GroupKFold ile"} yapıldı, eval kapısı {'geçti' if c['kapi_gecti'] else 'GEÇİLEMEDİ'}; bu model **kabul eşiğini sağlamadığı için yayın modeli değildir**; yalnız boru hattını göstermek için üretilmiş DENEYSEL bir çıktıdır. Oyuncuya müdahale etmesi için kullanılmamalıdır.\n"
              if c["deneme"] else "")
     return f"""---
 library_name: sklearn
@@ -336,8 +336,13 @@ def main():
     ap.add_argument("--dogrulama", default=str(DOGRULAMA), help="tutulan doğrulama seti CSV (varsayılan data/dogrulama.csv)")
     ap.add_argument("--olcum", choices=["holdout", "cv"], default="holdout",
                     help="holdout: tutulan doğrulama seti (spec v2.1). cv: iki turun gerçek oturumları havuzlanır, GroupKFold(5) (spec v2.2)")
+    ap.add_argument("--kapisiz", action="store_true",
+                    help="gerçek veride (cv) ölç, kapı geçilemese de modeli _out/deneysel/ altına yaz; DENEYSEL işaretli, yayınlanamaz")
     ap.add_argument("--cikti", default=None, help="çıktı klasörü (varsayılan model/, --deneme ile _out/deneme/); testler için")
     a = ap.parse_args()
+    if a.kapisiz:
+        a.olcum = "cv"
+    isaretli = a.deneme or a.kapisiz  # kapı geçilemese de devam eden, "yayınlanamaz" işaretli modlar
 
     ham, ozellikler, veri_sha = veri_yukle(Path(a.veri))
     gercek = ozellikler[ozellikler["kaynak"] == "gercek"].reset_index(drop=True)
@@ -361,6 +366,8 @@ def main():
         olcum, ek_egitim, hedef = dogrulama, gercek.iloc[0:0], MODEL_DIR  # kapı: gerçek geliştirme satırlarıyla eğit, doğrulamada ölç
         if a.olcum == "cv":  # spec v2.2: havuzlanmış gerçek oturumlar, sentetik yok
             olcum = pd.concat([gercek, dogrulama], ignore_index=True)
+    if a.kapisiz:
+        hedef = BURASI / "_out" / "deneysel"
     if a.cikti:
         hedef = Path(a.cikti)
 
@@ -380,7 +387,7 @@ def main():
 
     print(f"AUC {metrik['auc_ortalama']}  | GA95 {metrik['auc_havuz_ga95']}  | Brier {metrik['brier_model']} (taban {metrik['brier_taban']})")
     hatalar = kapi(metrik, olcum)
-    if hatalar and not a.deneme:
+    if hatalar and not isaretli:
         print("✗ EVAL KAPISI GEÇİLEMEDİ, artefakt yazılmadı:")
         for h in hatalar:
             print(f"   - {h}")
@@ -406,9 +413,9 @@ def main():
                  "gercek_satir": int(len(egitim) - (len(sentetik) if a.deneme else 0)),
                  "sentetik_satir": int(len(sentetik)) if a.deneme else 0,
                  "veri_sha256": veri_sha, "dogrulama_sha256": dogrulama_sha}
-    config = config_yaz(hedef, metrik, fark, veri_ozet, a.deneme, kapi_gecti=not hatalar)
+    config = config_yaz(hedef, metrik, fark, veri_ozet, isaretli, kapi_gecti=not hatalar)
     (hedef / "README.md").write_text(model_karti(config), encoding="utf-8")
-    durum = "Eval kapısı geçti." if not hatalar else "DENEME çıktısı (kapı geçmedi, yayınlanamaz)."
+    durum = "Eval kapısı geçti." if not hatalar else "DENEYSEL/DENEME çıktısı (kapı geçmedi, yayınlanamaz)."
     print(f"✓ {durum} Artefakt: {hedef}/ (model.onnx, config.json, README.md); ONNX farkı {fark:.1e}")
 
 
