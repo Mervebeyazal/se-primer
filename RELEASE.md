@@ -1,6 +1,6 @@
 # RELEASE: SE Primer v2.0 ("Akış Modeli")
 
-> Bu belge yayın kararlarını ve gerekçelerini taşır. `⚠️ DOLDURULACAK` ile işaretli alanlar yalnız Hugging Face yayını yapıldıktan sonra bilinebilir; gerçekleşmemiş bir değer yazılmaz.
+> **Durum: model yayınlanmadı.** Eval kapısı iki kez geçilemedi (bkz. § 8). Bu belgedeki Shadow/Canary/geri alma planı, kapıyı geçecek bir model çıktığında uygulanacak planı tarif eder; gerçekleşmemiş değer yazılmaz.
 
 ## 1. v2.0'da ne değişti
 
@@ -21,7 +21,7 @@ Tüketiciler modeli `main` dalından **indirmez**. `main` hareket eder; birisi r
 
 | Artefakt | Sürüm kimliği | Nerede |
 |---|---|---|
-| `model.onnx` + `config.json` | HF commit `⚠️ DOLDURULACAK <COMMIT_SHA>` | `https://huggingface.co/⚠️ <HF_KULLANICI>/<HF_REPO>/resolve/<COMMIT_SHA>/model.onnx` |
+| `model.onnx` + `config.json` | **yayınlanmadı** (kapı geçilemedi) | Geçen modelde: `https://huggingface.co/<kullanici>/<repo>/resolve/<commit>/model.onnx` |
 | Eğitim verisi | `config.json > veri.veri_sha256` | `data/oturumlar.csv` (git) |
 | Uygulama | git etiketi `v2.0.0` | GitHub, GitHub Pages |
 | Önceki sürüm (v1.1) | git commit `4d43e38` (etiket: `v1.1.0`) | GitHub |

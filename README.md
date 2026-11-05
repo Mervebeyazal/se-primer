@@ -5,17 +5,21 @@
 | Teslim bağlantısı | Durum |
 |---|---|
 | GitHub | https://github.com/Mervebeyazal/se-primer |
-| Hugging Face model (commit'li) | ⚠️ DOLDURULACAK (`RELEASE.md` bölüm 2) |
-| Canlı uygulama | ⚠️ DOLDURULACAK (GitHub Pages) |
-| Demo video (60-90 sn) | ⚠️ DOLDURULACAK |
+| Hugging Face model (commit'li) | **Yayınlanmadı:** eval kapısı geçilemedi (aşağıdaki not, `RELEASE.md` §8). Yayın aracı hazır: `tools/hf_yayinla.py` |
+| Canlı uygulama | https://mervebeyazal.github.io/se-primer/ (model olmadan v1 davranışı; `?veri=1` ile veri toplama) |
+| Demo video (60-90 sn) | Çekilmedi (gösterilecek model davranışı yok; model kapıyı geçemedi) |
 
-> ⚠️ **Gerçek veri durumu:** ⚠️ DOLDURULACAK (en az 15 gerçek oturum gerekir; `python tools/birlestir.py --kontrol` sayıları gösterir). 15'ten azsa `train.py` kasıtlı olarak durur ve model yayınlanmaz.
+> ⚠️ **Dürüst durum: model eğitildi ama eval kapısını geçemedi, bu yüzden yayınlanmadı.**
+> - Gerçek veri: **18 gerçek oturum** (birinci tur 3 kişi × 5 = 15; ikinci tur 3 oturum), sentetik 150 oturum (yalnız boru hattı denemesi için).
+> - `spec.md` eşikleri eğitimden önce yazıldı (AUC ≥ 0.70, Brier < taban, ONNX ≤ 1e-4, ≥ 15 gerçek oturum). **İlk deneme AUC 0.4533, ikinci deneme (18 oturum, gerçek-yalnız GroupKFold) AUC 0.3664**; ikisi de kapıyı geçemedi, eşikler gevşetilmedi. Nedenleri ve ölçüm düzeni değişikliklerinin (spec v2.1, v2.2) kronolojisi `RELEASE.md` §8'de.
+> - Bu yüzden `model/` yok; HF'ye model yüklenmedi, `tests/parite.json` üretilmedi (Cypress parite spec'i atlanır). Uygulama modeli bulamayınca **v1 gibi çalışır** (güvenli geri düşüş, `model.cy.js` bunu sınar).
+> - Hazır olanlar: eğitim hattı + kapı (`train.py`), ONNX aktarımı ve model kartı üretimi, tarayıcıda çıkarım ve mod politikası (`?p=0.72` ile gösterilebilir), Shadow/Canary mekanizması, testler, `RELEASE.md`.
 
 ## Hızlı başlangıç (3 komut)
 
 ```bash
 pip install -r requirements.txt     # 1) Python bağımlılıkları (scikit-learn 1.9.1 ve skl2onnx 1.20.0 sabit)
-python train.py                      # 2) data/oturumlar.csv ile eğit, data/dogrulama.csv'de kapıyı ölç -> model/{model.onnx, config.json, README.md}
+python train.py --olcum cv           # 2) eğit + eval kapısı -> geçerse model/{...}. ŞU AN GEÇMEZ (çıkış kodu 1, model/ yazılmaz); bkz. RELEASE.md §8
 python3 -m http.server 5173          # 3) http://localhost:5173  (ES modülleri için file:// değil, HTTP gerekir)
 ```
 
@@ -94,7 +98,7 @@ Bu çalışmada **Claude (Claude Code ile bir oturum)** kullanıldı. Süreç be
 1. **Spec v2 bölümü, veri hattı** (`?veri=1` toplama modu, `tools/birlestir.py`, `tools/sentetik_uret.py`, `data/SOZLUK.md`): Claude taslakladı, ben tasarım kararlarını (model KAPALI veri toplama, grup bazlı doğrulama, ölçümün yalnız gerçek veride yapılması) onayladım.
 2. **`train.py`, `src/telemetry.mjs`, `src/model.mjs`, `src/main.js` değişiklikleri, mod davranışları, `tools/hf_yayinla.py`, `tools/golge_degerlendir.py`**: Claude yazdı. Claude'un oturumda yakaladığı bir tutarsızlık: eğitimde süreler kırpılırken tarayıcı tarafı kırpmıyordu; JS ve Python için ortak örnek dosyasıyla düzeltildi.
 3. **Testler** (Python `unittest`, Node, Cypress `model.cy.js` / `parite.cy.js`) ve **`RELEASE.md` taslağı**: Claude yazdı. Tarayıcı doğrulaması Playwright (Chromium) ile yapıldı; **Cypress bu geliştirme ortamında çalıştırılamadı** (Cypress ikilisi indirilemedi), aynı senaryolar Playwright'ta birebir sınandı. Cypress'in gerçek koşusu GitHub Actions'tadır.
-4. **Elle düzelttiklerim:** ⚠️ DOLDURULACAK (hangi çıktıyı kendin düzelttin / değiştirdin / reddettin? Dürüst ve somut yaz.)
+4. **Elle düzelttiklerim / reddettiklerim:** (a) Veriyi arkadaşlarımdan ben topladım ve ilk turda herkesin senaryoyu okumadan tıkladığını fark ettiğimizde veri toplama yönergesini ben yeniden yazdırdım. (b) Başarısız sonuçtan sonra Claude'un gösterdiği kolay çıkışları (sentetik veriyi çıkarıp 0.785 AUC ile yayınlamak, eşiği düşürmek) **reddettim**; kapıyı geçemeyen modeli yayınlamamayı seçtim (seçenek A). (c) Eşikleri ve mod politikasını (0.70 / 0.60 / 0.25) ben onayladım. (d) Sentetik üreticinin varsayımının gerçek veriyle ters çıktığını görüp sentetik veriyi eğitimden çıkarma kararı verildi.
 5. **Kaynaklar:** fikirler Andrew Ng'nin dersteki 4 başlığı, Shankar vd. (3V), Mitchell vd. (model kartı), Breck vd. (ML Test Score) çerçevelerinden; ayrıntı `RELEASE.md > Kaynaklar`.
 
 ## Sınırlar ve yapılmayanlar
@@ -102,7 +106,7 @@ Bu çalışmada **Claude (Claude Code ile bir oturum)** kullanıldı. Süreç be
 - Gerçek veri **az sayıda tanıdık kişiden** gelir; model genel bir öğrenci kitlesini temsil etmez. Model kartı güven aralığını ve sınırları açıkça yazar.
 - Model davranış **korelasyonunu** tahmin eder, kişi hakkında yargı değildir; notlandırma ya da karar için kullanılmaz.
 - Tutor hâlâ LLM değil, kural tabanlı Sokratik prototiptir.
-- **Yapılmadı:** Rails/FastAPI sunucu tüketicisi (bonus), Expo mobil tüketici, canlı otomatik izleme.
+- **Yapılmadı:** model yayını ve demo videosu (kapı geçilemedi), Rails/FastAPI sunucu tüketicisi (bonus), Expo mobil tüketici, canlı otomatik izleme.
 - Google Stitch projesi ve Google AI Studio yayını yapılmadı (v1'den kalan açık not).
 
 ## v1 (geçen hafta) belgeleri
