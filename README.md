@@ -7,7 +7,7 @@
 | GitHub | https://github.com/Mervebeyazal/se-primer |
 | Hugging Face model (commit'li) | **Yayınlanmadı:** eval kapısı geçilemedi (aşağıdaki not, `RELEASE.md` §8). Yayın aracı hazır: `tools/hf_yayinla.py` |
 | Canlı uygulama | https://mervebeyazal.github.io/se-primer/ (model olmadan v1 davranışı; `?veri=1` ile veri toplama) |
-| Demo video (60-90 sn) | Çekilmedi (gösterilecek model davranışı yok; model kapıyı geçemedi) |
+| Demo video (83 sn) | https://github.com/Mervebeyazal/se-primer/blob/main/docs/demo.mp4 (model kapıyı geçemediği için olasılık `?p=` test kancasıyla sabitlenir; mod politikası gösterilir. Kaynak: `tools/demo_kayit.py`) |
 
 > ⚠️ **Dürüst durum: model eğitildi ama eval kapısını geçemedi, bu yüzden yayınlanmadı.**
 > - Gerçek veri: **18 gerçek oturum** (birinci tur 3 kişi × 5 = 15; ikinci tur 3 oturum), sentetik 150 oturum (yalnız boru hattı denemesi için).
@@ -106,7 +106,7 @@ Bu çalışmada **Claude (Claude Code ile bir oturum)** kullanıldı. Süreç be
 - Gerçek veri **az sayıda tanıdık kişiden** gelir; model genel bir öğrenci kitlesini temsil etmez. Model kartı güven aralığını ve sınırları açıkça yazar.
 - Model davranış **korelasyonunu** tahmin eder, kişi hakkında yargı değildir; notlandırma ya da karar için kullanılmaz.
 - Tutor hâlâ LLM değil, kural tabanlı Sokratik prototiptir.
-- **Yapılmadı:** model yayını ve demo videosu (kapı geçilemedi), Rails/FastAPI sunucu tüketicisi (bonus), Expo mobil tüketici, canlı otomatik izleme.
+- **Yapılmadı:** model yayını (kapı geçilemedi), Rails/FastAPI sunucu tüketicisi (bonus), Expo mobil tüketici, canlı otomatik izleme.
 - Google Stitch projesi ve Google AI Studio yayını yapılmadı (v1'den kalan açık not).
 
 ## v1 (geçen hafta) belgeleri
