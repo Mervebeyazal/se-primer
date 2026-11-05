@@ -1,15 +1,6 @@
 # SE Primer v2 · Sizinle Uyumlanan Primer (YZM301 — Yazılım Test ve Gerçekleme)
 
 **Etkileşimli mühendislik karar simülasyonu.** Sağlık randevu sistemi arızasında üç karar (mimari, test, KVKK), iki son ve her karardan sonra teknik açıklama. v1 (geçen hafta) uyumu sabit kurallarla yapıyordu. **v2'de uyumu, oyuncunun davranışından öğrenen küçük bir model yapıyor:** önceki sahnelerdeki karar süresi, sonucu okuma süresi, tutora sorulan soru ve ipucu kullanımından "bu sahnede riskli B'yi seçer mi?" olasılığını tahmin eder; olasılığa göre tutor **destek** verir, **meydan okur** ya da olduğu gibi bırakır.
-
-| Teslim bağlantısı | Durum |
-|---|---|
-| GitHub | https://github.com/Mervebeyazal/se-primer |
-| Hugging Face model (commit'li) | **Yayınlanmadı:** eval kapısı geçilemedi (aşağıdaki not, `RELEASE.md` §8). Yayın aracı hazır: `tools/hf_yayinla.py` |
-| Canlı uygulama | https://mervebeyazal.github.io/se-primer/ (model olmadan v1 davranışı; `?veri=1` ile veri toplama) |
-| Demo video (83 sn) | https://github.com/Mervebeyazal/se-primer/blob/main/docs/demo.mp4 (model kapıyı geçemediği için olasılık `?p=` test kancasıyla sabitlenir; mod politikası gösterilir. Kaynak: `tools/demo_kayit.py`) |
-
-> ⚠️ **Dürüst durum: model eğitildi ama eval kapısını geçemedi, bu yüzden yayınlanmadı.**
 > - Gerçek veri: **18 gerçek oturum** (birinci tur 3 kişi × 5 = 15; ikinci tur 3 oturum), sentetik 150 oturum (yalnız boru hattı denemesi için).
 > - `spec.md` eşikleri eğitimden önce yazıldı (AUC ≥ 0.70, Brier < taban, ONNX ≤ 1e-4, ≥ 15 gerçek oturum). **İlk deneme AUC 0.4533, ikinci deneme (18 oturum, gerçek-yalnız GroupKFold) AUC 0.3664**; ikisi de kapıyı geçemedi, eşikler gevşetilmedi. Nedenleri ve ölçüm düzeni değişikliklerinin (spec v2.1, v2.2) kronolojisi `RELEASE.md` §8'de.
 > - Bu yüzden `model/` yok; HF'ye model yüklenmedi, `tests/parite.json` üretilmedi (Cypress parite spec'i atlanır). Uygulama modeli bulamayınca **v1 gibi çalışır** (güvenli geri düşüş, `model.cy.js` bunu sınar).
